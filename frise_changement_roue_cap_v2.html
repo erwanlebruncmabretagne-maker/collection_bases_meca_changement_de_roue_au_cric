@@ -1,0 +1,419 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+
+  .app { background: #0a0a1a; min-height: 100vh; color: #fff; position: relative; overflow-x: hidden; }
+  .stars { position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 50%, #0d0d2b 0%, #0a0a1a 70%); pointer-events: none; }
+  .star { position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%; opacity: 0.6; animation: twinkle 3s infinite alternate; }
+  @keyframes twinkle { from{opacity:0.2}to{opacity:0.9} }
+
+  .title-block { text-align: center; padding: 24px 20px 12px; position: relative; z-index: 2; }
+  .subtitle-top { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:6px; color:#ff6b35; text-transform:uppercase; margin-bottom:8px; }
+  .main-title { font-family:'Orbitron',monospace; font-size:clamp(20px,5vw,38px); font-weight:900; color:#ff6b35; text-shadow:0 0 10px #ff6b35,0 0 20px #ff4500,3px 3px 0 #8b0000,6px 6px 0 #5a0000; letter-spacing:3px; line-height:1.1; }
+  .lightning { color:#ffe066; text-shadow:0 0 15px #ffe066,0 0 30px #ffd700; }
+  .subtitle-bottom { font-family:'Orbitron',monospace; font-size:12px; color:#ffe066; letter-spacing:4px; text-shadow:0 0 8px #ffd700; margin-top:6px; }
+  .cap-badge { display:inline-block; background:linear-gradient(135deg,#ff6b35,#ff2200); color:#fff; font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; padding:4px 14px; border-radius:20px; margin-top:10px; box-shadow:0 0 12px rgba(255,107,53,.6); }
+
+  .instruction { text-align:center; color:#a0b8d0; font-size:13px; padding:6px 20px 4px; position:relative; z-index:2; }
+  .instruction span { color:#ffe066; font-weight:bold; }
+
+  /* LAYOUT: frise + panneau côte à côte */
+  .main-area { display:flex; gap:0; position:relative; z-index:2; padding:12px 12px 0; }
+
+  .timeline-col { flex:1; min-width:0; }
+  .timeline-track { display:flex; align-items:stretch; justify-content:center; flex-wrap:wrap; gap:8px; padding:8px 0; }
+
+  .step-card { width:125px; background:rgba(10,30,60,.88); border:2px solid #1a3a6a; border-radius:10px; cursor:pointer; transition:border-color .2s,transform .15s,box-shadow .2s; user-select:none; display:flex; flex-direction:column; align-items:center; padding:10px 8px; }
+  .step-card:hover { border-color:#ff6b35; box-shadow:0 0 14px rgba(255,107,53,.4); transform:translateY(-3px); }
+  .step-card.active { border-color:#ffe066; box-shadow:0 0 18px rgba(255,224,102,.5); transform:translateY(-3px); }
+  .step-card.dragging { opacity:.45; cursor:grabbing; }
+  .step-card.drag-over { border-color:#ffe066; box-shadow:0 0 20px rgba(255,224,102,.5); transform:scale(1.04); }
+  .step-card.correct { border-color:#4dff91!important; box-shadow:0 0 12px rgba(77,255,145,.4)!important; }
+  .step-card.incorrect { border-color:#ff4444!important; box-shadow:0 0 12px rgba(255,68,68,.4)!important; }
+  .step-num { font-family:'Orbitron',monospace; font-size:10px; color:#ff6b35; letter-spacing:1px; margin-bottom:5px; }
+  .step-icon { font-size:26px; margin-bottom:5px; line-height:1; }
+  .step-label { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:11px; color:#e0eaf8; text-align:center; line-height:1.3; text-transform:uppercase; letter-spacing:.4px; }
+  .drag-hint { font-size:9px; color:#4a7a9b; margin-top:5px; letter-spacing:1px; text-transform:uppercase; }
+
+  /* PANNEAU DÉTAIL LATÉRAL */
+  .detail-panel { width:280px; flex-shrink:0; background:rgba(5,15,40,.95); border:1.5px solid #1a3a6a; border-radius:14px; padding:16px 14px; margin-left:12px; transition:border-color .3s; display:flex; flex-direction:column; gap:10px; }
+  .detail-panel.open { border-color:#ff6b35; }
+  .detail-empty { color:#4a7a9b; font-size:12px; text-align:center; margin:auto; letter-spacing:.5px; line-height:1.6; }
+  .detail-title { font-family:'Orbitron',monospace; font-size:10px; color:#ff6b35; letter-spacing:1.5px; text-transform:uppercase; }
+  .detail-desc { font-size:12.5px; color:#c8dff0; line-height:1.6; }
+
+  /* Lecteur vidéo dans le panneau */
+  .detail-video-wrap { position:relative; border-radius:8px; overflow:hidden; background:#000; cursor:pointer; }
+  .detail-video-thumb { width:100%; display:block; border-radius:8px; }
+  .detail-play-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .detail-play-btn { width:44px; height:44px; background:rgba(255,107,53,.9); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 14px rgba(255,107,53,.6); transition:transform .2s; }
+  .detail-play-btn:hover { transform:scale(1.12); }
+  .detail-play-tri { width:0; height:0; border-top:10px solid transparent; border-bottom:10px solid transparent; border-left:16px solid #fff; margin-left:3px; }
+  .detail-iframe { width:100%; height:152px; border:none; border-radius:8px; display:none; }
+  .detail-ts { font-family:'Orbitron',monospace; font-size:9px; color:#4a7a9b; letter-spacing:1px; text-align:center; }
+  .detail-replay-btn { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:1px; color:#ff6b35; background:rgba(255,107,53,.12); border:1px solid #ff6b35; border-radius:6px; padding:5px 10px; cursor:pointer; transition:background .2s; display:none; width:100%; text-align:center; }
+  .detail-replay-btn:hover { background:rgba(255,107,53,.28); }
+  .detail-speak-btn { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:1px; color:#ffe066; background:rgba(255,224,102,.1); border:1px solid #ffe066; border-radius:6px; padding:7px 10px; cursor:pointer; transition:background .2s; text-align:center; }
+  .detail-speak-btn:hover { background:rgba(255,224,102,.25); }
+
+  /* Vidéo globale */
+  .video-section { position:relative; z-index:2; padding:10px 12px 6px; display:flex; justify-content:center; }
+  .video-card { background:rgba(10,25,50,.9); border:1.5px solid #1a3a6a; border-radius:12px; padding:10px 14px; width:100%; max-width:520px; }
+  .video-label { font-family:'Orbitron',monospace; font-size:10px; color:#ffe066; letter-spacing:2px; margin-bottom:8px; text-transform:uppercase; }
+  .video-thumb-wrap { position:relative; border-radius:8px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; min-height:160px; cursor:pointer; }
+  .video-iframe-main { width:100%; height:210px; border:none; border-radius:8px; display:none; }
+  .video-thumb { width:100%; display:block; border-radius:8px; }
+  .play-btn-overlay { position:absolute; width:52px; height:52px; background:rgba(255,107,53,.85); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 18px rgba(255,107,53,.5); transition:transform .2s; }
+  .play-btn-overlay:hover { transform:scale(1.1); }
+  .play-tri { width:0; height:0; border-top:11px solid transparent; border-bottom:11px solid transparent; border-left:18px solid #fff; margin-left:3px; }
+  .video-caption { font-size:11px; color:#5a8aaa; margin-top:6px; text-align:center; }
+
+  .validate-section { position:relative; z-index:2; display:flex; justify-content:center; padding:10px 12px 20px; }
+  .validate-btn { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; letter-spacing:3px; color:#0a0a1a; background:linear-gradient(135deg,#ff6b35 0%,#ffe066 60%,#ff6b35 100%); border:none; border-radius:8px; padding:13px 32px; cursor:pointer; text-transform:uppercase; box-shadow:0 0 20px rgba(255,107,53,.6); transition:transform .15s,box-shadow .15s; }
+  .validate-btn:hover { transform:scale(1.05); box-shadow:0 0 30px rgba(255,107,53,.8); }
+  .validate-btn:active { transform:scale(.97); }
+
+  /* RÉSULTAT */
+  .result-overlay { display:none; position:fixed; inset:0; z-index:500; align-items:center; justify-content:center; background:rgba(0,0,0,.7); }
+  .result-overlay.visible { display:flex; }
+  .result-box { background:#0a0f20; border-radius:16px; padding:28px 32px; text-align:center; max-width:360px; width:90%; position:relative; z-index:501; border:2px solid #ff6b35; box-shadow:0 0 40px rgba(255,107,53,.5); }
+  .result-emoji { font-size:52px; margin-bottom:10px; display:block; }
+  .result-title { font-family:'Orbitron',monospace; font-size:20px; font-weight:900; margin-bottom:10px; }
+  .result-title.success { color:#4dff91; text-shadow:0 0 15px #00ff66; }
+  .result-title.fail { color:#ff4444; text-shadow:0 0 15px #ff0000; }
+  .result-msg { font-size:12.5px; color:#a0b8d0; line-height:1.5; margin-bottom:14px; }
+  .result-close-btn { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:#fff; background:rgba(255,107,53,.2); border:1.5px solid #ff6b35; border-radius:8px; padding:9px 20px; cursor:pointer; transition:background .2s; text-transform:uppercase; margin-right:8px; }
+  .result-close-btn:hover { background:rgba(255,107,53,.4); }
+  .result-reset-btn { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:#ffe066; background:rgba(255,224,102,.1); border:1.5px solid #ffe066; border-radius:8px; padding:9px 20px; cursor:pointer; transition:background .2s; text-transform:uppercase; }
+  .result-reset-btn:hover { background:rgba(255,224,102,.25); }
+  .error-indicators { margin-top:10px; font-size:11.5px; color:#ff6666; line-height:1.6; text-align:left; }
+  .error-indicators .err-item { margin-bottom:3px; }
+
+  canvas#particles { position:fixed; inset:0; z-index:499; pointer-events:none; }
+
+  /* ANIMATION FLASH sur les cartes */
+  @keyframes flashGreen { 0%,100%{background:rgba(10,30,60,.88)}50%{background:rgba(77,255,145,.18)} }
+  @keyframes flashRed   { 0%,100%{background:rgba(10,30,60,.88)}50%{background:rgba(255,68,68,.18)} }
+  .step-card.anim-correct   { animation:flashGreen .5s ease 2; }
+  .step-card.anim-incorrect { animation:flashRed   .4s ease 3; }
+
+  @media(max-width:680px){
+    .main-area{ flex-direction:column; }
+    .detail-panel{ width:100%; margin-left:0; margin-top:10px; }
+    .step-card{ width:105px; }
+  }
+</style>
+
+<canvas id="particles"></canvas>
+
+<div class="app">
+  <div class="stars" id="stars-bg"></div>
+
+  <div class="title-block">
+    <div class="subtitle-top">&#9889; Formation Automobile &#9889;</div>
+    <div class="main-title">RETOUR VERS<br><span class="lightning">LES BASES</span> !</div>
+    <div class="subtitle-bottom">LE CHANGEMENT DE ROUE AU CRIC</div>
+    <div class="cap-badge">CAP 1ère ANNÉE</div>
+  </div>
+
+  <p class="instruction">&#8645; Glisse les étapes pour les ordonner &nbsp;|&nbsp; <span>Clique</span> sur une étape pour le détail &amp; la vidéo</p>
+
+  <div class="main-area">
+    <div class="timeline-col">
+      <div class="timeline-track" id="timeline"></div>
+    </div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-empty" id="detail-empty">&#128072; Clique sur une étape<br>pour voir l'explication<br>et visionner le passage<br>correspondant dans la vidéo.</div>
+      <div id="detail-content" style="display:none; display:flex; flex-direction:column; gap:10px;">
+        <div class="detail-title" id="d-title"></div>
+        <div class="detail-desc" id="d-desc"></div>
+        <div class="detail-video-wrap" id="d-video-wrap">
+          <img class="detail-video-thumb" id="d-thumb" src="" alt="">
+          <div class="detail-play-overlay" id="d-play-overlay">
+            <div class="detail-play-btn"><div class="detail-play-tri"></div></div>
+          </div>
+          <iframe class="detail-iframe" id="d-iframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+        <div class="detail-ts" id="d-ts"></div>
+        <button class="detail-replay-btn" id="d-replay">&#8635; Revoir ce passage</button>
+        <button class="detail-speak-btn" id="d-speak">&#128266; Écouter l'explication</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-section">
+    <div class="video-card">
+      <div class="video-label">&#9654; Vidéo complète de référence</div>
+      <div class="video-thumb-wrap" id="video-wrap">
+        <img class="video-thumb" src="https://img.youtube.com/vi/2UqW_sAMHBQ/hqdefault.jpg" id="v-thumb">
+        <div class="play-btn-overlay" id="v-play"><div class="play-tri"></div></div>
+        <iframe class="video-iframe-main" id="v-iframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <p class="video-caption">Changement de roue au cric — démonstration complète</p>
+    </div>
+  </div>
+
+  <div class="validate-section">
+    <button class="validate-btn" id="validate-btn">&#9889; VALIDER L'ORDRE &#9889;</button>
+  </div>
+</div>
+
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box" id="result-box">
+    <span class="result-emoji" id="r-emoji"></span>
+    <div class="result-title" id="r-title"></div>
+    <div class="result-msg" id="r-msg"></div>
+    <div class="error-indicators" id="r-errors"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="result-close-btn" id="result-close">Fermer</button>
+      <button class="result-reset-btn" id="result-reset">Réessayer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const YT = '2UqW_sAMHBQ';
+
+const STEPS = [
+  { id:1, icon:"⚠️", label:"Sécuriser le véhicule",           tooltipTitle:"Étape 1 — Sécurisation",       tooltip:"Serrez le frein à main, placez des cales sous les roues opposées, allumez les feux de détresse et mettez le gilet jaune. La sécurité est la priorité absolue avant toute intervention !", start:11,  end:21,  correct:1 },
+  { id:2, icon:"🔩", label:"Dévisser légèrement les écrous",   tooltipTitle:"Étape 2 — Desserrage initial", tooltip:"Avec la clé de roue, desserrez légèrement les écrous en croix sans les retirer, roue encore au sol. Cela évite qu'elle tourne librement lors de la levée.",                          start:34,  end:59,  correct:2 },
+  { id:3, icon:"⬆️", label:"Lever le véhicule",                tooltipTitle:"Étape 3 — Levée au cric",      tooltip:"Placez le cric sous le point d'appui prévu par le constructeur, puis actionnez-le jusqu'à ce que la roue soit dégagée du sol d'environ 5 cm.",                                      start:60,  end:92,  correct:3 },
+  { id:4, icon:"❌", label:"Dévisser complètement les écrous", tooltipTitle:"Étape 4 — Dévissage complet",  tooltip:"Dévissez complètement les écrous et conservez-les en lieu sûr. La roue est en l'air : elle ne pivote plus, le dévissage est aisé.",                                                    start:93,  end:113, correct:4 },
+  { id:5, icon:"🔄", label:"Retirer et changer la roue",       tooltipTitle:"Étape 5 — Dépose et pose",     tooltip:"Retirez la roue crevée en la tirant vers vous. Alignez ensuite les trous de la jante de secours avec les goujons et emboîtez la nouvelle roue.",                                     start:114, end:129, correct:5 },
+  { id:6, icon:"🔧", label:"Visser à la main",                 tooltipTitle:"Étape 6 — Vissage manuel",     tooltip:"Vissez les écrous à la main en croix, en alternant les côtés opposés, jusqu'à ce qu'ils soient bien en contact avec la jante.",                                                       start:130, end:147, correct:6 },
+  { id:7, icon:"⬇️", label:"Baisser le véhicule",              tooltipTitle:"Étape 7 — Descente du cric",   tooltip:"Abaissez doucement le cric jusqu'au sol. Le poids du véhicule doit reposer sur la roue neuve avant de procéder au serrage final.",                                                    start:148, end:152, correct:7 },
+  { id:8, icon:"✅", label:"Serrage final des écrous",          tooltipTitle:"Étape 8 — Serrage final",      tooltip:"Serrez définitivement les écrous en croix à l'aide de la clé, au couple préconisé. Ne pas dépasser 80 km/h avec une roue de secours galette.",                                       start:154, end:182, correct:8 }
+];
+
+/* ── Audio via Web Audio API ── */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSuccess() {
+  const notes = [523,659,784,1047];
+  notes.forEach((freq, i) => {
+    const osc = AC.createOscillator();
+    const gain = AC.createGain();
+    osc.connect(gain); gain.connect(AC.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const t = AC.currentTime + i * 0.13;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t); osc.stop(t + 0.35);
+  });
+}
+
+function playFail() {
+  const notes = [300, 220, 160];
+  notes.forEach((freq, i) => {
+    const osc = AC.createOscillator();
+    const gain = AC.createGain();
+    osc.connect(gain); gain.connect(AC.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    const t = AC.currentTime + i * 0.18;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.25, t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t); osc.stop(t + 0.28);
+  });
+}
+
+function resumeAC() { if (AC.state === 'suspended') AC.resume(); }
+
+/* ── Shuffle ── */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+let order = shuffle(STEPS);
+let dragSrcIdx = null;
+let activeStep = null;
+const synth = window.speechSynthesis;
+
+function formatTime(s) { return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+/* ── Rendu de la frise ── */
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  order.forEach((step, idx) => {
+    const card = document.createElement('div');
+    card.className = 'step-card' + (activeStep===step.id ? ' active' : '');
+    card.draggable = true;
+    card.dataset.idx = idx;
+    card.innerHTML = `<div class="step-num">POS. ${idx+1}</div><div class="step-icon">${step.icon}</div><div class="step-label">${step.label}</div><div class="drag-hint">&#8661; glisser</div>`;
+
+    // Drag & drop
+    card.addEventListener('dragstart', e => { dragSrcIdx=idx; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('drag-over')); });
+    card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect='move'; document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('drag-over')); card.classList.add('drag-over'); });
+    card.addEventListener('drop', e => { e.preventDefault(); if(dragSrcIdx!==null&&dragSrcIdx!==idx){const m=order.splice(dragSrcIdx,1)[0];order.splice(idx,0,m);renderTimeline();} });
+
+    // Clic → panneau détail
+    card.addEventListener('click', () => openDetail(step));
+
+    tl.appendChild(card);
+  });
+}
+
+/* ── Panneau détail ── */
+function openDetail(step) {
+  activeStep = step.id;
+  renderTimeline(); // met à jour la carte active
+
+  document.getElementById('detail-empty').style.display = 'none';
+  const dc = document.getElementById('detail-content');
+  dc.style.display = 'flex';
+
+  document.getElementById('d-title').textContent = step.tooltipTitle;
+  document.getElementById('d-desc').textContent  = step.tooltip;
+  document.getElementById('d-thumb').src = `https://img.youtube.com/vi/${YT}/mqdefault.jpg`;
+  document.getElementById('d-ts').textContent = `▶ ${formatTime(step.start)}  →  ⏹ ${formatTime(step.end)}`;
+
+  // Reset vidéo
+  const iframe = document.getElementById('d-iframe');
+  iframe.src = '';
+  iframe.style.display = 'none';
+  document.getElementById('d-thumb').style.display = 'block';
+  document.getElementById('d-play-overlay').style.display = 'flex';
+  document.getElementById('d-replay').style.display = 'none';
+
+  document.getElementById('d-play-overlay').onclick = () => playSegment(step);
+  document.getElementById('d-replay').onclick = () => playSegment(step);
+  document.getElementById('d-speak').onclick = () => { resumeAC(); speak(step.tooltip); };
+
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function playSegment(step) {
+  const iframe = document.getElementById('d-iframe');
+  iframe.src = `https://www.youtube.com/embed/${YT}?autoplay=1&start=${step.start}&end=${step.end}&rel=0&modestbranding=1`;
+  iframe.style.display = 'block';
+  document.getElementById('d-thumb').style.display = 'none';
+  document.getElementById('d-play-overlay').style.display = 'none';
+  document.getElementById('d-replay').style.display = 'block';
+}
+
+/* ── Synthèse vocale ── */
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'fr-FR'; utt.rate = 0.93;
+  synth.speak(utt);
+}
+
+/* ── Vidéo complète ── */
+document.getElementById('v-play').addEventListener('click', () => {
+  document.getElementById('v-thumb').style.display = 'none';
+  document.getElementById('v-play').style.display = 'none';
+  const iframe = document.getElementById('v-iframe');
+  iframe.src = `https://www.youtube.com/embed/${YT}?autoplay=1`;
+  iframe.style.display = 'block';
+});
+
+/* ── Particules ── */
+function launchParticles(success) {
+  const canvas = document.getElementById('particles');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = success
+    ? ['#4dff91','#ffe066','#00ff66','#ff6b35','#fff','#00eaff']
+    : ['#ff4444','#ff0000','#ff6b35','#ff2200','#888','#ffaa00'];
+  const N = success ? 150 : 100;
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  const particles = Array.from({length:N}, () => {
+    const angle = Math.random()*Math.PI*2;
+    const speed = success ? (Math.random()*12+4) : (Math.random()*8+2);
+    return { x:cx, y:cy, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed-(success?3:1),
+      r:Math.random()*10+3, color:colors[Math.floor(Math.random()*colors.length)],
+      life:1, decay:Math.random()*.018+.008,
+      shape:success?(Math.random()>.5?'circle':'star'):'circle' };
+  });
+  function drawStar(ctx,x,y,r,c){ctx.save();ctx.translate(x,y);ctx.fillStyle=c;ctx.beginPath();for(let i=0;i<5;i++){const a=(Math.PI*2/5)*i-Math.PI/2,ai=a+Math.PI/5;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);ctx.lineTo(Math.cos(ai)*r*.4,Math.sin(ai)*r*.4);}ctx.closePath();ctx.fill();ctx.restore();}
+  let frame;
+  (function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive=false;
+    particles.forEach(p=>{
+      if(p.life<=0)return;alive=true;
+      p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=p.decay;
+      ctx.globalAlpha=Math.max(0,p.life);
+      if(p.shape==='star')drawStar(ctx,p.x,p.y,p.r,p.color);
+      else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
+    });
+    ctx.globalAlpha=1;
+    if(alive)frame=requestAnimationFrame(animate);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  })();
+}
+
+/* ── Validation ── */
+document.getElementById('validate-btn').addEventListener('click', () => {
+  resumeAC();
+  const errors = [];
+  const cards = document.querySelectorAll('.step-card');
+  order.forEach((step,idx) => {
+    const card = cards[idx];
+    card.classList.remove('correct','incorrect','anim-correct','anim-incorrect');
+    if (step.correct===idx+1) {
+      card.classList.add('correct');
+      void card.offsetWidth; // reflow
+      card.classList.add('anim-correct');
+    } else {
+      card.classList.add('incorrect');
+      void card.offsetWidth;
+      card.classList.add('anim-incorrect');
+      errors.push({pos:idx+1,label:step.label,expected:step.correct});
+    }
+  });
+
+  const success = errors.length===0;
+
+  // Décalage léger pour que l'animation des cartes soit visible avant les particules
+  setTimeout(() => {
+    launchParticles(success);
+    if (success) playSuccess(); else playFail();
+  }, 200);
+
+  const overlay = document.getElementById('result-overlay');
+  document.getElementById('r-emoji').textContent = success?'🏆':'🔧';
+  const title = document.getElementById('r-title');
+  title.textContent = success?'PARFAIT ! BRAVO !':'PAS ENCORE…';
+  title.className = 'result-title '+(success?'success':'fail');
+  document.getElementById('r-msg').textContent = success
+    ?'Tu as remis toutes les étapes dans le bon ordre ! Tu es prêt(e) pour le CAP !'
+    :`${errors.length} étape(s) mal placée(s). Les cartes en rouge doivent être déplacées.`;
+  document.getElementById('r-errors').innerHTML = errors.map(e=>
+    `<div class="err-item">❌ Pos.${e.pos} : "${e.label}" → pos.${e.expected}</div>`).join('');
+  document.getElementById('result-box').style.borderColor = success?'#4dff91':'#ff4444';
+
+  setTimeout(() => overlay.classList.add('visible'), 500);
+});
+
+document.getElementById('result-close').addEventListener('click', () => document.getElementById('result-overlay').classList.remove('visible'));
+document.getElementById('result-reset').addEventListener('click', () => {
+  document.getElementById('result-overlay').classList.remove('visible');
+  order = shuffle(STEPS);
+  document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('correct','incorrect','anim-correct','anim-incorrect'));
+  activeStep = null;
+  document.getElementById('detail-empty').style.display = 'block';
+  document.getElementById('detail-content').style.display = 'none';
+  document.getElementById('detail-panel').classList.remove('open');
+  renderTimeline();
+});
+
+/* ── Étoiles déco ── */
+(function createStars(){
+  const bg=document.getElementById('stars-bg');
+  for(let i=0;i<60;i++){const s=document.createElement('div');s.className='star';s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';s.style.animationDelay=(Math.random()*3)+'s';s.style.animationDuration=(2+Math.random()*3)+'s';bg.appendChild(s);}
+})();
+
+renderTimeline();
+</script>
